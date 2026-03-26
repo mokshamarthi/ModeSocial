@@ -12,14 +12,22 @@ function Login({ setPage }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // ✅ Fetch name from Firestore
+      // 🔥 Fetch user data
       const userDoc = await getDoc(doc(db, "users", user.uid));
-      const name = userDoc.data().name;
 
-      // ✅ Store username
-      localStorage.setItem("username", name);
+      if (userDoc.exists()) {
+        const data = userDoc.data();
 
-      // 🔥 ADMIN CHECK (by email)
+        // ✅ FIXED HERE
+        const name = data.username;
+
+        // ✅ Store correct values
+        localStorage.setItem("username", name);
+        localStorage.setItem("uid", user.uid);
+        localStorage.setItem("age", data.age);
+      }
+
+      // 🔥 ADMIN CHECK
       if (email === "admin@gmail.com") {
         localStorage.setItem("isAdmin", "true");
       } else {

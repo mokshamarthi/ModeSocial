@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { db, auth } from "../firebase";
+import { db } from "../firebase";
 import {
   collection,
   getDocs,
@@ -8,14 +8,17 @@ import {
   updateDoc
 } from "firebase/firestore";
 
-function Profile() {
+function Profile({ selectedUserUid }) {
   const [posts, setPosts] = useState([]);
   const [selectedVideo, setSelectedVideo] = useState(null);
   const [profilePic, setProfilePic] = useState(null);
+  const [username, setUsername] = useState("");
 
-  const username = localStorage.getItem("username");
+  // ✅ Get UID (own or other user)
+  const currentUid =
+    selectedUserUid || localStorage.getItem("uid");
 
-  // 🔥 Fetch user posts
+  // 🔥 Fetch posts using UID
   useEffect(() => {
     const fetchPosts = async () => {
       const snapshot = await getDocs(collection(db, "posts"));
@@ -26,88 +29,47 @@ function Profile() {
       }));
 
       const userPosts = allPosts.filter(
-        post =>
-          post.name &&
-          username &&
-          post.name.toLowerCase() === username.toLowerCase()
+        post => post.uid === currentUid
       );
 
       setPosts(userPosts);
     };
 
-    fetchPosts();
-  }, [username]);
+    if (currentUid) fetchPosts();
+  }, [currentUid]);
 
-  // 🔥 Fetch profile picture
+  // 🔥 Fetch user data (profile pic + username)
   useEffect(() => {
-    const fetchProfilePic = async () => {
-      const user = auth.currentUser;
-      if (!user) return;
+    const fetchUser = async () => {
+      try {
+        if (!currentUid) return;
 
-      const userDoc = await getDoc(doc(db, "users", user.uid));
+        const userDoc = await getDoc(doc(db, "users", currentUid));
 
-      if (userDoc.exists()) {
-        setProfilePic(userDoc.data().profilePic || null);
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setProfilePic(data.profilePic || null);
+          setUsername(data.username || "");
+        }
+      } catch (err) {
+        console.error(err);
       }
     };
 
-    fetchProfilePic();
-  }, []);
+    fetchUser();
+  }, [currentUid]);
 
-  // 🔥 Image crop + compression
-  const processImage = (file) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      const reader = new FileReader();
-
-      reader.onload = (e) => {
-        img.src = e.target.result;
-      };
-
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const size = Math.min(img.width, img.height);
-
-        canvas.width = 300;
-        canvas.height = 300;
-
-        const ctx = canvas.getContext("2d");
-
-        ctx.drawImage(
-          img,
-          (img.width - size) / 2,
-          (img.height - size) / 2,
-          size,
-          size,
-          0,
-          0,
-          300,
-          300
-        );
-
-        canvas.toBlob(
-          (blob) => resolve(blob),
-          "image/jpeg",
-          0.7
-        );
-      };
-
-      reader.readAsDataURL(file);
-    });
-  };
-
-  // 📸 Upload to Cloudinary (FIXED)
+  // 📸 Upload profile pic (only own profile)
   const handleProfilePic = async (e) => {
+    if (selectedUserUid) return;
+
     const file = e.target.files[0];
     if (!file) return;
 
     try {
-      const processedImage = await processImage(file);
-
       const data = new FormData();
-      data.append("file", processedImage);
-      data.append("upload_preset", "profile"); // ✅ your preset
-      data.append("cloud_name", "drdyvdsze"); // ✅ your cloud
+      data.append("file", file);
+      data.append("upload_preset", "profile");
 
       const res = await fetch(
         "https://api.cloudinary.com/v1_1/drdyvdsze/image/upload",
@@ -118,12 +80,9 @@ function Profile() {
       );
 
       const result = await res.json();
-      console.log("Cloudinary result:", result);
-
       const imageUrl = result.secure_url;
 
-      // 💾 Save in Firestore
-      await updateDoc(doc(db, "users", auth.currentUser.uid), {
+      await updateDoc(doc(db, "users", currentUid), {
         profilePic: imageUrl
       });
 
@@ -147,31 +106,29 @@ function Profile() {
         }}
       >
         {/* 👤 PROFILE PIC */}
-        <label style={{ cursor: "pointer" }}>
+        <label style={{ cursor: selectedUserUid ? "default" : "pointer" }}>
           <img
             src={
               profilePic ||
               "https://cdn-icons-png.flaticon.com/512/149/149071.png"
             }
             alt="profile"
-            onError={(e) => {
-              e.target.src =
-                "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-            }}
             style={{
               width: "100px",
               height: "100px",
               borderRadius: "50%",
-              objectFit: "cover",
-              border: "2px solid black"
+              objectFit: "cover"
             }}
           />
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleProfilePic}
-            style={{ display: "none" }}
-          />
+
+          {!selectedUserUid && (
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleProfilePic}
+              style={{ display: "none" }}
+            />
+          )}
         </label>
 
         {/* 👤 USER INFO */}
@@ -181,7 +138,7 @@ function Profile() {
         </div>
       </div>
 
-      {/* 🎬 REELS GRID */}
+      {/* 🎬 POSTS GRID */}
       <div
         style={{
           display: "grid",
@@ -206,7 +163,7 @@ function Profile() {
         ))}
       </div>
 
-      {/* 🎬 FULL SCREEN PLAYER */}
+      {/* 🎬 FULL SCREEN VIDEO */}
       {selectedVideo && (
         <div
           onClick={() => setSelectedVideo(null)}
@@ -219,18 +176,14 @@ function Profile() {
             background: "rgba(0,0,0,0.8)",
             display: "flex",
             justifyContent: "center",
-            alignItems: "center",
-            zIndex: 2000
+            alignItems: "center"
           }}
         >
           <video
             src={selectedVideo}
             controls
             autoPlay
-            style={{
-              width: "60%",
-              borderRadius: "10px"
-            }}
+            style={{ width: "60%" }}
           />
         </div>
       )}

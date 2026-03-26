@@ -8,11 +8,11 @@ import {
   arrayUnion
 } from "firebase/firestore";
 
-function Dashboard({ mode }) {
+function Dashboard({ mode, setPage, setSelectedUserUid }) {
   const [posts, setPosts] = useState([]);
   const videoRefs = useRef([]);
 
-  const userAge = 20;
+  const userAge = Number(localStorage.getItem("age")) || 20;
   const username = localStorage.getItem("username");
 
   // 🔥 Fetch posts
@@ -36,9 +36,9 @@ function Dashboard({ mode }) {
     };
 
     fetchPosts();
-  }, [mode]);
+  }, [mode, userAge]);
 
-  // 🎬 Auto play (SAFE FIX)
+  // 🎬 Auto play
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -46,7 +46,7 @@ function Dashboard({ mode }) {
           const video = entry.target;
 
           if (entry.isIntersecting) {
-            video.play().catch(() => {}); // ✅ FIXED ERROR
+            video.play().catch(() => {});
           } else {
             video.pause();
           }
@@ -155,9 +155,15 @@ function Dashboard({ mode }) {
             background: "#f9f9f9"
           }}
         >
-          {/* 👤 NAME */}
-          <p style={{ fontWeight: "bold" }}>
-            {post.name || "Unknown"}
+          {/* 👤 USERNAME */}
+          <p
+            style={{ fontWeight: "bold", cursor: "pointer" }}
+            onClick={() => {
+              setSelectedUserUid(post.uid);
+              setPage("profile");
+            }}
+          >
+            {post.username || post.name || "Unknown"}
           </p>
 
           {/* 🎬 VIDEO */}
@@ -195,18 +201,20 @@ function Dashboard({ mode }) {
             </button>
           </div>
 
-          {/* 🚨 REPORT */}
+          {/* 🚨 REPORT BUTTON (FIXED VISIBILITY) */}
           <button
             onClick={() => handleReport(post.id, post.reports || 0)}
             style={{
               position: "absolute",
               top: "20px",
               right: "20px",
-              background: "rgba(255,0,0,0.7)",
+              background: "red",
               color: "white",
               border: "none",
-              padding: "6px 12px",
-              borderRadius: "6px"
+              padding: "8px 14px",
+              borderRadius: "8px",
+              zIndex: 10, // 🔥 FIX
+              cursor: "pointer"
             }}
           >
             🚨 Report
@@ -220,7 +228,8 @@ function Dashboard({ mode }) {
                 top: "60px",
                 right: "20px",
                 color: "orange",
-                fontWeight: "bold"
+                fontWeight: "bold",
+                zIndex: 10
               }}
             >
               ⚠️ Under Review

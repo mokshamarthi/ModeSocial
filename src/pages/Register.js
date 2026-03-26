@@ -10,13 +10,14 @@ function Register({ setPage }) {
   const [age, setAge] = useState("");
 
   const handleRegister = async () => {
-    // 🔒 Basic validation
+    // 🔒 Validation
     if (!name || !email || !password || !age) {
       alert("Please fill all fields ⚠️");
       return;
     }
 
     try {
+      // 🔥 Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -24,22 +25,24 @@ function Register({ setPage }) {
       );
 
       const user = userCredential.user;
-
       const numericAge = Number(age);
 
-      // ✅ Save user data in Firestore
+      // ✅ Save user in Firestore WITH UID
       await setDoc(doc(db, "users", user.uid), {
-        name: name.trim(),
+        uid: user.uid, // 🔥 IMPORTANT
+        username: name.trim(), // 🔥 consistent naming
         email,
         age: numericAge,
         role: numericAge < 13 ? "child" : "user",
         preferredMode: "study",
+        profilePic: "", // 🔥 default profile pic
         createdAt: new Date()
       });
 
-      // ✅ Store username locally (for profile + posts)
+      // ✅ Store locally
       localStorage.setItem("username", name.trim());
       localStorage.setItem("age", numericAge);
+      localStorage.setItem("uid", user.uid); // 🔥 IMPORTANT
 
       alert("User registered successfully ✅");
 
@@ -49,7 +52,7 @@ function Register({ setPage }) {
       setPassword("");
       setAge("");
 
-      // 👉 Go to login
+      // 👉 Go to login page
       setPage("login");
 
     } catch (error) {

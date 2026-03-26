@@ -6,12 +6,15 @@ import Dashboard from "./pages/Dashboard";
 import CreatePost from "./pages/CreatePost";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
+import ReelsPage from "./pages/ReelsPage";
 
 function App() {
   const [page, setPage] = useState("login");
   const [mode, setMode] = useState("all");
 
-  // ✅ ONLY ADMIN CHECK (clean)
+  // ✅ UID BASED
+  const [selectedUserUid, setSelectedUserUid] = useState(null);
+
   const isAdmin = localStorage.getItem("isAdmin") === "true";
 
   return (
@@ -37,10 +40,21 @@ function App() {
             <button
               onClick={() => {
                 setMode("all");
+                setSelectedUserUid(null); // ✅ reset
                 setPage("dashboard");
               }}
             >
               🏠 Home
+            </button>
+
+            {/* 🎬 REELS */}
+            <button
+              onClick={() => {
+                setSelectedUserUid(null);
+                setPage("reels");
+              }}
+            >
+              🎬 Reels
             </button>
 
             {/* 🎯 MODE */}
@@ -54,11 +68,16 @@ function App() {
             </button>
 
             {/* 👤 PROFILE */}
-            <button onClick={() => setPage("profile")}>
+            <button
+              onClick={() => {
+                setSelectedUserUid(null); // own profile
+                setPage("profile");
+              }}
+            >
               👤 Profile
             </button>
 
-            {/* 🛠 ADMIN (ONLY ADMIN) */}
+            {/* 🛠 ADMIN */}
             {isAdmin && (
               <button onClick={() => setPage("admin")}>
                 🛠 Admin
@@ -68,8 +87,8 @@ function App() {
             {/* 🚪 LOGOUT */}
             <button
               onClick={() => {
-                localStorage.removeItem("username");
-                localStorage.removeItem("isAdmin"); // ✅ important
+                localStorage.clear(); // 🔥 better
+                setSelectedUserUid(null);
                 setPage("login");
                 setMode("all");
               }}
@@ -110,7 +129,7 @@ function App() {
           </>
         )}
 
-        {/* MODE SELECT */}
+        {/* MODE */}
         {page === "mode" && (
           <ModeSelect
             setMode={(m) => {
@@ -122,10 +141,22 @@ function App() {
 
         {/* DASHBOARD */}
         {page === "dashboard" && (
-          <Dashboard mode={mode} setPage={setPage} />
+          <Dashboard
+            mode={mode}
+            setPage={setPage}
+            setSelectedUserUid={setSelectedUserUid} // ✅ FIXED
+          />
         )}
 
-        {/* CREATE POST */}
+        {/* 🎬 REELS */}
+        {page === "reels" && (
+          <ReelsPage
+            setPage={setPage}
+            setSelectedUserUid={setSelectedUserUid} // ✅ FIXED
+          />
+        )}
+
+        {/* CREATE */}
         {page === "create" && (
           <>
             <CreatePost setPage={setPage} />
@@ -136,9 +167,11 @@ function App() {
         )}
 
         {/* PROFILE */}
-        {page === "profile" && <Profile />}
+        {page === "profile" && (
+          <Profile selectedUserUid={selectedUserUid} /> // ✅ FIXED
+        )}
 
-        {/* 🛠 ADMIN PANEL */}
+        {/* ADMIN */}
         {page === "admin" && <Admin />}
       </div>
     </div>
