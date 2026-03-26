@@ -25,11 +25,11 @@ function Dashboard({ mode, setPage }) {
         ...doc.data()
       }));
 
-      // ✅ FILTER (handles "all")
+      // ✅ FILTER (All + Mode + Age)
       const filtered = allPosts.filter(post =>
         (!mode || mode === "all" || post.mode === mode) &&
-        userAge >= post.minAge &&
-        userAge <= post.maxAge
+        userAge >= (post.minAge ?? 0) &&
+        userAge <= (post.maxAge ?? 100)
       );
 
       setPosts(filtered);
@@ -70,22 +70,19 @@ function Dashboard({ mode, setPage }) {
     }
 
     try {
-      setPosts((prevPosts) =>
-        prevPosts.map((p) =>
+      setPosts(prev =>
+        prev.map(p =>
           p.id === postId
             ? { ...p, likes: [...(p.likes || []), username] }
             : p
         )
       );
 
-      const postRef = doc(db, "posts", postId);
-
-      await updateDoc(postRef, {
+      await updateDoc(doc(db, "posts", postId), {
         likes: arrayUnion(username)
       });
-
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -94,31 +91,22 @@ function Dashboard({ mode, setPage }) {
     if (!text) return;
 
     try {
-      const postRef = doc(db, "posts", postId);
-
-      await updateDoc(postRef, {
-        comments: arrayUnion({
-          user: username,
-          text: text
-        })
+      await updateDoc(doc(db, "posts", postId), {
+        comments: arrayUnion({ user: username, text })
       });
 
-      setPosts((prevPosts) =>
-        prevPosts.map((p) =>
+      setPosts(prev =>
+        prev.map(p =>
           p.id === postId
             ? {
                 ...p,
-                comments: [
-                  ...(p.comments || []),
-                  { user: username, text }
-                ]
+                comments: [...(p.comments || []), { user: username, text }]
               }
             : p
         )
       );
-
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -128,34 +116,11 @@ function Dashboard({ mode, setPage }) {
     alert("Link copied 🔗");
   };
 
-  // 🔙 BACK (FIXED)
-  const handleBack = () => {
-    videoRefs.current.forEach(v => v && v.pause());
-    setPage("mode"); // ✅ go to ModeSelect
-  };
-
   return (
     <div style={{ height: "90vh", overflowY: "scroll" }}>
+      
 
-      {/* 🔙 BACK BUTTON */}
-      <button
-        onClick={handleBack}
-        style={{
-          position: "fixed",
-          top: "10px",
-          left: "10px",
-          zIndex: 1000,
-          padding: "8px 12px",
-          background: "black",
-          color: "white",
-          borderRadius: "5px",
-          border: "none",
-          cursor: "pointer"
-        }}
-      >
-        ⬅ Back
-      </button>
-
+      {/* 🔥 POSTS */}
       {posts.map((post, index) => (
         <div
           key={post.id}
@@ -165,13 +130,12 @@ function Dashboard({ mode, setPage }) {
             flexDirection: "column",
             justifyContent: "center",
             alignItems: "center",
-            background: "white",
-            position: "relative"
+            position: "relative",
+            background: "white"
           }}
         >
-
           {/* 👤 NAME */}
-          <p style={{ color: "black", fontWeight: "bold" }}>
+          <p style={{ fontWeight: "bold" }}>
             {post.name || "Unknown"}
           </p>
 
@@ -188,7 +152,7 @@ function Dashboard({ mode, setPage }) {
           {/* ❤️ 💬 🔗 */}
           <div style={{ marginTop: "10px" }}>
             <button onClick={() => handleLike(post.id)}>
-              ❤️ {post.likes ? post.likes.length : 0}
+              ❤️ {post.likes?.length || 0}
             </button>
 
             <input
@@ -201,30 +165,29 @@ function Dashboard({ mode, setPage }) {
               }}
             />
 
-            <button onClick={() => handleShare(post.videoUrl)}>🔗</button>
+            <button onClick={() => handleShare(post.videoUrl)}>
+              🔗
+            </button>
           </div>
 
           {/* 💬 COMMENTS */}
           <div style={{ marginTop: "10px" }}>
-            {post.comments &&
-              post.comments.map((c, i) => (
-                <p key={i}>
-                  <b>{c.user}:</b> {c.text}
-                </p>
-              ))}
+            {post.comments?.map((c, i) => (
+              <p key={i}>
+                <b>{c.user}:</b> {c.text}
+              </p>
+            ))}
           </div>
 
           {/* 📝 CAPTION */}
           <div
             style={{
               position: "absolute",
-              bottom: "20px",
-              color: "black"
+              bottom: "20px"
             }}
           >
             <p>{post.caption}</p>
           </div>
-
         </div>
       ))}
     </div>

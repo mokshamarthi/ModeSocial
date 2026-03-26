@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 function Login({ setPage }) {
   const [email, setEmail] = useState("");
@@ -8,12 +9,19 @@ function Login({ setPage }) {
 
   const handleLogin = async () => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // ✅ Fetch name from Firestore
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+
+      const name = userDoc.data().name;
+
+      // ✅ Store actual name
+      localStorage.setItem("username", name);
 
       alert("Login successful ✅");
-
-      // 👉 Go to mode selection
-      setPage("mode");
+      setPage("dashboard");
 
     } catch (error) {
       alert(error.message);
@@ -21,8 +29,7 @@ function Login({ setPage }) {
   };
 
   return (
-  <div className="container">
-    <div className="card">
+    <div>
       <h2>Login</h2>
 
       <input
@@ -39,8 +46,7 @@ function Login({ setPage }) {
 
       <button onClick={handleLogin}>Login</button>
     </div>
-  </div>
-);
+  );
 }
 
 export default Login;

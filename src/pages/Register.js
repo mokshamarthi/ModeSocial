@@ -10,69 +10,90 @@ function Register({ setPage }) {
   const [age, setAge] = useState("");
 
   const handleRegister = async () => {
-  try {
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
+    // 🔒 Basic validation
+    if (!name || !email || !password || !age) {
+      alert("Please fill all fields ⚠️");
+      return;
+    }
 
-    const user = userCredential.user;
+    try {
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
 
-    // 👉 Save extra user info in Firestore
-    await setDoc(doc(db, "users", user.uid), {
-      name,
-      email,
-      age: Number(age),
-      role: age < 13 ? "child" : "user",
-      preferredMode: "study"
-    });
+      const user = userCredential.user;
 
-    // 🔥 SAVE NAME LOCALLY
-    localStorage.setItem("username", name);
+      const numericAge = Number(age);
 
-    alert("User registered successfully ✅");
+      // ✅ Save user data in Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        name: name.trim(),
+        email,
+        age: numericAge,
+        role: numericAge < 13 ? "child" : "user",
+        preferredMode: "study",
+        createdAt: new Date()
+      });
 
-    setPage("login");
+      // ✅ Store username locally (for profile + posts)
+      localStorage.setItem("username", name.trim());
+      localStorage.setItem("age", numericAge);
 
-  } catch (error) {
-    alert(error.message);
-  }
-};
+      alert("User registered successfully ✅");
+
+      // 🔄 Clear inputs
+      setName("");
+      setEmail("");
+      setPassword("");
+      setAge("");
+
+      // 👉 Go to login
+      setPage("login");
+
+    } catch (error) {
+      alert(error.message);
+    }
+  };
 
   return (
-  <div className="container">
-    <div className="card">
-      <h2>Register</h2>
+    <div className="container">
+      <div className="card">
+        <h2>Register</h2>
 
-      <input
-        type="text"
-        placeholder="Enter name"
-        onChange={(e) => setName(e.target.value)}
-      />
+        <input
+          type="text"
+          placeholder="Enter name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
 
-      <input
-        type="email"
-        placeholder="Enter email"
-        onChange={(e) => setEmail(e.target.value)}
-      />
+        <input
+          type="email"
+          placeholder="Enter email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-      <input
-        type="password"
-        placeholder="Enter password"
-        onChange={(e) => setPassword(e.target.value)}
-      />
+        <input
+          type="password"
+          placeholder="Enter password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-      <input
-        type="number"
-        placeholder="Enter age"
-        onChange={(e) => setAge(e.target.value)}
-      />
+        <input
+          type="number"
+          placeholder="Enter age"
+          value={age}
+          onChange={(e) => setAge(e.target.value)}
+        />
 
-      <button onClick={handleRegister}>Register</button>
+        <button onClick={handleRegister}>Register</button>
+      </div>
     </div>
-  </div>
-);
+  );
 }
 
 export default Register;
