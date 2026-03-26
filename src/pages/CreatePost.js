@@ -11,15 +11,12 @@ function CreatePost({ setPage }) {
   const [maxAge, setMaxAge] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // 🔥 Auto-fill name if saved
   useEffect(() => {
     const storedName = localStorage.getItem("username");
     if (storedName) setName(storedName);
   }, []);
 
   const handleUpload = async () => {
-    console.log("Upload clicked");
-
     if (!file) {
       alert("Please select a video");
       return;
@@ -32,7 +29,6 @@ function CreatePost({ setPage }) {
 
     try {
       setLoading(true);
-      console.log("Uploading to Cloudinary...");
 
       // 🔥 Upload to Cloudinary
       const data = new FormData();
@@ -49,17 +45,13 @@ function CreatePost({ setPage }) {
 
       const result = await res.json();
 
-      console.log("Cloudinary response:", result);
-
       if (result.error) {
         throw new Error(result.error.message);
       }
 
       const videoUrl = result.secure_url;
 
-      console.log("Cloudinary URL:", videoUrl);
-
-      // 💾 Save to Firestore
+      // ✅ FIRESTORE SAVE (SIMPLIFIED)
       await addDoc(collection(db, "posts"), {
         videoUrl,
         caption,
@@ -67,18 +59,20 @@ function CreatePost({ setPage }) {
         minAge: minAge ? Number(minAge) : 0,
         maxAge: maxAge ? Number(maxAge) : 100,
         createdAt: new Date(),
-        name: name // ✅ FIXED
+        name: name,
+
+        // 🔥 REPORT SYSTEM FIELDS
+        reports: 0,
+        reported: false
       });
 
-      // 🔥 Save name locally for next time
       localStorage.setItem("username", name);
 
       alert("Reel uploaded successfully 🎬");
-
       setPage("dashboard");
 
     } catch (error) {
-      console.error("FULL ERROR:", error);
+      console.error(error);
       alert(error.message || "Upload failed ❌");
     } finally {
       setLoading(false);
@@ -90,28 +84,24 @@ function CreatePost({ setPage }) {
       <div className="card">
         <h2>Upload Reel 🎬</h2>
 
-        {/* 👤 NAME */}
         <input
           placeholder="Your Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
 
-        {/* 🎬 VIDEO */}
         <input
           type="file"
           accept="video/*"
           onChange={(e) => setFile(e.target.files[0])}
         />
 
-        {/* 📝 CAPTION */}
         <input
           placeholder="Caption"
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
         />
 
-        {/* 🎯 MODE */}
         <select value={mode} onChange={(e) => setMode(e.target.value)}>
           <option value="">Select Mode</option>
           <option value="study">Study</option>
@@ -119,11 +109,10 @@ function CreatePost({ setPage }) {
           <option value="kids">Kids</option>
           <option value="comedy">Comedy</option>
           <option value="fashion">Fashion</option>
-        <option value="food">Food</option>
-        <option value="travel">Travel</option>
+          <option value="food">Food</option>
+          <option value="travel">Travel</option>
         </select>
 
-        {/* 🎂 AGE FILTER */}
         <input
           type="number"
           placeholder="Min Age"
@@ -138,12 +127,7 @@ function CreatePost({ setPage }) {
           onChange={(e) => setMaxAge(e.target.value)}
         />
 
-        {/* 🚀 BUTTON */}
-        <button
-          type="button"
-          onClick={handleUpload}
-          disabled={loading}
-        >
+        <button onClick={handleUpload} disabled={loading}>
           {loading ? "Uploading..." : "Upload Reel"}
         </button>
       </div>

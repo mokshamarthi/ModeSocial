@@ -14,11 +14,17 @@ function Login({ setPage }) {
 
       // ✅ Fetch name from Firestore
       const userDoc = await getDoc(doc(db, "users", user.uid));
-
       const name = userDoc.data().name;
 
-      // ✅ Store actual name
+      // ✅ Store username
       localStorage.setItem("username", name);
+
+      // 🔥 ADMIN CHECK (by email)
+      if (email === "admin@gmail.com") {
+        localStorage.setItem("isAdmin", "true");
+      } else {
+        localStorage.removeItem("isAdmin");
+      }
 
       alert("Login successful ✅");
       setPage("dashboard");

@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { db, auth } from "../firebase";
-import { collection, getDocs, doc, getDoc, updateDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  updateDoc
+} from "firebase/firestore";
 
 function Profile() {
   const [posts, setPosts] = useState([]);
@@ -9,7 +15,7 @@ function Profile() {
 
   const username = localStorage.getItem("username");
 
-  // 🔥 Fetch posts
+  // 🔥 Fetch user posts
   useEffect(() => {
     const fetchPosts = async () => {
       const snapshot = await getDocs(collection(db, "posts"));
@@ -32,13 +38,14 @@ function Profile() {
     fetchPosts();
   }, [username]);
 
-  // 🔥 Fetch profile pic
+  // 🔥 Fetch profile picture
   useEffect(() => {
     const fetchProfilePic = async () => {
       const user = auth.currentUser;
       if (!user) return;
 
       const userDoc = await getDoc(doc(db, "users", user.uid));
+
       if (userDoc.exists()) {
         setProfilePic(userDoc.data().profilePic || null);
       }
@@ -47,7 +54,7 @@ function Profile() {
     fetchProfilePic();
   }, []);
 
-  // 🔥 Compress + crop image
+  // 🔥 Image crop + compression
   const processImage = (file) => {
     return new Promise((resolve) => {
       const img = new Image();
@@ -59,7 +66,7 @@ function Profile() {
 
       img.onload = () => {
         const canvas = document.createElement("canvas");
-        const size = Math.min(img.width, img.height); // square crop
+        const size = Math.min(img.width, img.height);
 
         canvas.width = 300;
         canvas.height = 300;
@@ -79,11 +86,9 @@ function Profile() {
         );
 
         canvas.toBlob(
-          (blob) => {
-            resolve(blob);
-          },
+          (blob) => resolve(blob),
           "image/jpeg",
-          0.7 // 🔥 compression quality
+          0.7
         );
       };
 
@@ -91,7 +96,7 @@ function Profile() {
     });
   };
 
-  // 📸 Upload to Cloudinary
+  // 📸 Upload to Cloudinary (FIXED)
   const handleProfilePic = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -101,11 +106,11 @@ function Profile() {
 
       const data = new FormData();
       data.append("file", processedImage);
-      data.append("upload_preset", "profile"); // 🔥 replace
-      data.append("cloud_name", "drdyvdsze");       // 🔥 replace
+      data.append("upload_preset", "profile"); // ✅ your preset
+      data.append("cloud_name", "drdyvdsze"); // ✅ your cloud
 
       const res = await fetch(
-        "https://api.cloudinary.com/v1_1/your_cloud_name/image/upload",
+        "https://api.cloudinary.com/v1_1/drdyvdsze/image/upload",
         {
           method: "POST",
           body: data
@@ -113,6 +118,8 @@ function Profile() {
       );
 
       const result = await res.json();
+      console.log("Cloudinary result:", result);
+
       const imageUrl = result.secure_url;
 
       // 💾 Save in Firestore
@@ -144,9 +151,13 @@ function Profile() {
           <img
             src={
               profilePic ||
-              "https://via.placeholder.com/100?text=Upload"
+              "https://cdn-icons-png.flaticon.com/512/149/149071.png"
             }
             alt="profile"
+            onError={(e) => {
+              e.target.src =
+                "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+            }}
             style={{
               width: "100px",
               height: "100px",
